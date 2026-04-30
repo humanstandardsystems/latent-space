@@ -3,36 +3,68 @@ import { useWebSocket } from '../contexts/WebSocketContext.tsx';
 import { ClubCanvas } from '../components/ClubCanvas.tsx';
 import { ChatPanel } from '../components/ChatPanel.tsx';
 import { NowPlaying } from '../components/NowPlaying.tsx';
+import { TwitchEmbed } from '../components/TwitchEmbed.tsx';
 
 export function ClubPage() {
-  const { connected } = useWebSocket();
+  const { connected, subscribe } = useWebSocket();
+  const [twitchChannel, setTwitchChannel] = useState<string | null>(null);
+  const [connectedCount, setConnectedCount] = useState(0);
+
+  useEffect(() => {
+    return subscribe((msg) => {
+      if (msg.type === 'room_snapshot') {
+        const snap = msg.data as { connectedCount: number };
+        setConnectedCount(snap.connectedCount);
+      }
+      if (msg.type === 'blob_join') setConnectedCount((n) => n + 1);
+      if (msg.type === 'blob_leave') setConnectedCount((n) => Math.max(0, n - 1));
+    });
+  }, [subscribe]);
+
+  useEffect(() => {
+    fetch('/api/now-playing', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.set?.twitchChannel) setTwitchChannel(d.set.twitchChannel);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}>
-      {/* 3D canvas fills the page */}
       <div style={{ flex: 1, position: 'relative' }}>
         <Suspense fallback={null}>
           <ClubCanvas />
         </Suspense>
+
         <NowPlaying />
+
+        {twitchChannel && <TwitchEmbed channel={twitchChannel} />}
+
         <div style={{
           position: 'absolute',
           top: 16,
           right: 16,
-          fontSize: 11,
-          color: connected ? '#4ade80' : '#f87171',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 4,
           fontFamily: 'monospace',
+          fontSize: 11,
         }}>
-          {connected ? '● live' : '○ connecting...'}
+          <span style={{ color: connected ? '#4ade80' : '#f87171' }}>
+            {connected ? '● live' : '○ connecting...'}
+          </span>
+          <span style={{ color: '#4a3060' }}>{connectedCount} in the room</span>
         </div>
+
         <div style={{ position: 'absolute', bottom: 16, left: 16, fontSize: 11, color: '#4a3060', fontFamily: 'monospace' }}>
           <a href="/auth" style={{ color: '#7c3aed' }}>sign in</a>
           {' · '}
-          <a href="/dj" style={{ color: '#7c3aed' }}>dj dashboard</a>
+          <a href="/dj" style={{ color: '#7c3aed' }}>dj</a>
         </div>
       </div>
 
-      {/* Chat sidebar */}
       <ChatPanel />
     </div>
   );
