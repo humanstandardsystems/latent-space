@@ -2,13 +2,19 @@ import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyWs from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
 import { createDb, runMigrations } from '@latent-space/db';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import { existsSync } from 'fs';
 import { env } from './env.js';
 import { authRoutes } from './auth.js';
 import { apiRoutes } from './routes/api.js';
 import { wsRoutes } from './ws.js';
 import { startEarnLoop } from './earn.js';
 import { getAccountFromToken } from './sessions.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -48,6 +54,16 @@ async function main() {
 
   // health
   app.get('/health', async () => ({ ok: true }));
+
+  // serve web frontend in production
+  const webDist = resolve(__dirname, '../../web/dist');
+  if (existsSync(webDist)) {
+    await app.register(fastifyStatic, { root: webDist, prefix: '/' });
+    // SPA fallback — serve index.html for any non-API route
+    app.setNotFoundHandler(async (_req, reply) => {
+      return reply.sendFile('index.html');
+    });
+  }
 
   startEarnLoop(db);
 
