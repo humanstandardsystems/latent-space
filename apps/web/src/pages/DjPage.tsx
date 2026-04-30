@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 
 const GENRES = ['dubstep', 'dnb', 'riddim', 'trap', 'ambient', 'psychedelic', 'deep', 'house', 'techno'];
 

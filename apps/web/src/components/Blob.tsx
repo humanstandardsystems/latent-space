@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Mesh } from 'three';
-import * as THREE from 'three';
 
 type AnimationState = 'idle' | 'moshing' | 'floating' | 'shuffling';
 
