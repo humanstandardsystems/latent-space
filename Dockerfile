@@ -4,7 +4,7 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm tsx
 
 WORKDIR /app
 
@@ -25,4 +25,4 @@ RUN pnpm --filter @latent-space/web build
 
 EXPOSE 3000
 
-CMD ["node_modules/.bin/tsx", "apps/server/src/index.ts"]
+CMD ["tsx", "apps/server/src/index.ts"]
