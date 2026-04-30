@@ -14,7 +14,10 @@ COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY packages/db/package.json ./packages/db/
 
-# install all dependencies
+# force better-sqlite3 to compile from source (no pre-built binaries for this platform)
+ENV npm_config_build_from_source=true
+
+# install all dependencies (this compiles better-sqlite3 native addon)
 RUN pnpm install
 
 # copy source
