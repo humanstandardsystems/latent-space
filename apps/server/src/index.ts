@@ -2,12 +2,25 @@ import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyWs from '@fastify/websocket';
-import fastifyStatic from '@fastify/static';
 import { createDb, runMigrations } from '@latent-space/db';
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-import { existsSync } from 'fs';
+import { dirname, resolve, extname } from 'path';
+import { createReadStream, existsSync, statSync } from 'fs';
 import { env } from './env.js';
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.json': 'application/json',
+};
 import { authRoutes } from './auth.js';
 import { apiRoutes } from './routes/api.js';
 import { wsRoutes } from './ws.js';
@@ -55,13 +68,16 @@ async function main() {
   // health
   app.get('/health', async () => ({ ok: true }));
 
-  // serve web frontend in production
+  // serve web frontend in production (no @fastify/static needed)
   const webDist = resolve(__dirname, '../../web/dist');
   if (existsSync(webDist)) {
-    await app.register(fastifyStatic, { root: webDist, prefix: '/' });
-    // SPA fallback — serve index.html for any non-API route
-    app.setNotFoundHandler(async (_req, reply) => {
-      return reply.sendFile('index.html');
+    app.setNotFoundHandler(async (req, reply) => {
+      const reqPath = req.url.split('?')[0];
+      const candidate = resolve(webDist, reqPath.replace(/^\//, ''));
+      const isFile = candidate.startsWith(webDist) && existsSync(candidate) && statSync(candidate).isFile();
+      const target = isFile ? candidate : resolve(webDist, 'index.html');
+      reply.type(MIME[extname(target)] ?? 'application/octet-stream');
+      return reply.send(createReadStream(target));
     });
   }
 
