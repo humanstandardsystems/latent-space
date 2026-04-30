@@ -6,6 +6,7 @@ import {
 } from '@latent-space/db';
 import { eq, desc, isNull, and } from 'drizzle-orm';
 import { room } from '../room.js';
+import { broadcast } from '../ws.js';
 
 function requireAuth(req: { account: { id: string; email: string; isDj: boolean; createdAt: Date } | null }) {
   if (!req.account) throw { statusCode: 401, message: 'not authenticated' };
@@ -121,6 +122,7 @@ export async function apiRoutes(app: FastifyInstance, db: Db) {
     if (req.body.genre) {
       await db.update(sets).set({ genre: req.body.genre }).where(eq(sets.id, state.activeSetId));
     }
+    broadcast('now_playing', { artist: req.body.artist, title: req.body.title, genre: req.body.genre });
     return { trackId: id };
   });
 
@@ -137,7 +139,11 @@ export async function apiRoutes(app: FastifyInstance, db: Db) {
       droppedAt: new Date(),
     });
     room.updateAudio({ dropActive: true });
-    setTimeout(() => room.updateAudio({ dropActive: false }), 8000);
+    broadcast('drop_start', { dropId: id });
+    setTimeout(() => {
+      room.updateAudio({ dropActive: false });
+      broadcast('drop_end', { dropId: id });
+    }, 8000);
     return { dropId: id };
   });
 
@@ -145,6 +151,11 @@ export async function apiRoutes(app: FastifyInstance, db: Db) {
   app.patch<{ Body: { bpm?: number; subBassEnergy?: number; dropActive?: boolean } }>('/api/sets/audio-state', async (req) => {
     requireDj(req);
     room.updateAudio(req.body);
+    broadcast('audio_state', room.getState().audioState);
+    // handle drop via audio analysis
+    if (req.body.dropActive === true && !room.getState().audioState.dropActive) {
+      broadcast('drop_start', { triggeredBy: 'audio' });
+    }
     return { ok: true };
   });
 

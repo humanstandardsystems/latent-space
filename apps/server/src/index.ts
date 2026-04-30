@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import fastifyWs from '@fastify/websocket';
 import { createDb, runMigrations } from '@latent-space/db';
 import { env } from './env.js';
 import { authRoutes } from './auth.js';
 import { apiRoutes } from './routes/api.js';
+import { wsRoutes } from './ws.js';
 import { getAccountFromToken } from './sessions.js';
 
 declare module 'fastify' {
@@ -30,6 +32,8 @@ async function main() {
     secret: env.SESSION_SECRET,
   });
 
+  await app.register(fastifyWs);
+
   // session middleware — attach account to every request
   app.addHook('preHandler', async (req) => {
     const token = req.cookies['session'];
@@ -39,6 +43,7 @@ async function main() {
   // routes
   await authRoutes(app, db);
   await apiRoutes(app, db);
+  await wsRoutes(app, db);
 
   // health
   app.get('/health', async () => ({ ok: true }));
