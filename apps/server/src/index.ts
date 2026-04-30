@@ -4,6 +4,7 @@ import fastifyCors from '@fastify/cors';
 import { createDb, runMigrations } from '@latent-space/db';
 import { env } from './env.js';
 import { authRoutes } from './auth.js';
+import { apiRoutes } from './routes/api.js';
 import { getAccountFromToken } from './sessions.js';
 
 declare module 'fastify' {
@@ -37,6 +38,7 @@ async function main() {
 
   // routes
   await authRoutes(app, db);
+  await apiRoutes(app, db);
 
   // health
   app.get('/health', async () => ({ ok: true }));
