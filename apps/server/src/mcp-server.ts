@@ -12,6 +12,7 @@ import { apiRoutes } from './routes/api.js';
 import { wsRoutes } from './ws.js';
 import { getAccountFromToken } from './sessions.js';
 import { startMcpServer } from './mcp.js';
+import { startEarnLoop } from './earn.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -48,6 +49,7 @@ async function main() {
   await wsRoutes(app, db);
   app.get('/health', async () => ({ ok: true }));
 
+  startEarnLoop(db);
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
 
   // Start MCP server on stdio (stdout/stdin)

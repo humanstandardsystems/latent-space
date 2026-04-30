@@ -7,6 +7,7 @@ import { env } from './env.js';
 import { authRoutes } from './auth.js';
 import { apiRoutes } from './routes/api.js';
 import { wsRoutes } from './ws.js';
+import { startEarnLoop } from './earn.js';
 import { getAccountFromToken } from './sessions.js';
 
 declare module 'fastify' {
@@ -47,6 +48,8 @@ async function main() {
 
   // health
   app.get('/health', async () => ({ ok: true }));
+
+  startEarnLoop(db);
 
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
   console.log(`server listening on :${env.PORT}`);
