@@ -8,14 +8,14 @@ RUN npm install -g pnpm tsx node-gyp
 
 WORKDIR /app
 
-# copy workspace manifests first (better layer caching)
-COPY package.json pnpm-workspace.yaml ./
+# copy workspace manifests and lockfile (lockfile ensures exact versions are installed)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY packages/db/package.json ./packages/db/
 
 # install all dependencies (skip lifecycle scripts — we compile better-sqlite3 manually below)
-RUN pnpm install --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # explicitly compile better-sqlite3 native addon for this platform
 RUN cd /app/node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && node-gyp rebuild --release
