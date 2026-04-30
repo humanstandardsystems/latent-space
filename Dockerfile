@@ -3,8 +3,8 @@ FROM node:22-slim
 # build tools needed for better-sqlite3 native compilation
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-# install pnpm
-RUN npm install -g pnpm tsx
+# install pnpm, tsx, and node-gyp globally
+RUN npm install -g pnpm tsx node-gyp
 
 WORKDIR /app
 
@@ -14,11 +14,11 @@ COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY packages/db/package.json ./packages/db/
 
-# force better-sqlite3 to compile from source (no pre-built binaries for this platform)
-ENV npm_config_build_from_source=true
+# install all dependencies (skip lifecycle scripts — we compile better-sqlite3 manually below)
+RUN pnpm install --ignore-scripts
 
-# install all dependencies (this compiles better-sqlite3 native addon)
-RUN pnpm install
+# explicitly compile better-sqlite3 native addon for this platform
+RUN cd /app/node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && node-gyp rebuild --release
 
 # copy source
 COPY . .
