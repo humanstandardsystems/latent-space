@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyWs from '@fastify/websocket';
-import { createDb, runMigrations } from '@latent-space/db';
+import { createDb, runMigrations, seedSubstances } from '@latent-space/db';
 import { fileURLToPath } from 'url';
 import { dirname, resolve, extname } from 'path';
 import { createReadStream, existsSync, statSync } from 'fs';
@@ -39,6 +39,7 @@ async function main() {
   const db = createDb(env.DATABASE_URL);
 
   runMigrations(db);
+  await seedSubstances(db);
   console.log('db ready');
 
   const app = Fastify({ logger: { level: 'info' } });
