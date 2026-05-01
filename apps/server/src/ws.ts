@@ -1,10 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
-import { blobs, chatMessages, type Db } from '@latent-space/db';
-import { eq } from 'drizzle-orm';
+import { chatMessages, type Db } from '@latent-space/db';
 import { room } from './room.js';
-import { sessionStore } from './sessions.js';
 
 // accountId → WebSocket
 const clients = new Map<string, WebSocket>();
@@ -28,11 +26,7 @@ export function getConnectedClients() {
 
 export async function wsRoutes(app: FastifyInstance, db: Db) {
   app.get('/ws', { websocket: true }, (socket, req) => {
-    // resolve account from session cookie
-    const cookieHeader = req.headers.cookie ?? '';
-    const match = cookieHeader.match(/session=([^;]+)/);
-    const sessionToken = match?.[1];
-    const accountId = sessionToken ? sessionStore.get(sessionToken) : undefined;
+    const accountId = req.account?.id;
 
     if (!accountId) {
       socket.send(JSON.stringify({ type: 'error', data: { message: 'not authenticated' } }));
