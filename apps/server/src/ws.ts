@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
-import { chatMessages, type Db } from '@latent-space/db';
+import { eq } from 'drizzle-orm';
+import { chatMessages, blobs, type Db } from '@latent-space/db';
 import { room } from './room.js';
 import { redeemWsTicket } from './sessions.js';
 
@@ -39,12 +40,16 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
       }
     }, 3000);
 
-    function onAuthenticated(id: string) {
+    async function onAuthenticated(id: string) {
       accountId = id;
       clearTimeout(authTimeout);
 
       clients.set(accountId, socket);
       room.addClient(accountId);
+
+      const [blob] = await db.select().from(blobs).where(eq(blobs.accountId, id));
+      const color = blob?.color ?? '#8b5cf6';
+      room.updateColor(accountId, color);
 
       const state = room.getState();
       socket.send(JSON.stringify({
@@ -54,10 +59,11 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
           audioState: state.audioState,
           connectedCount: state.connectedAccountIds.size,
           blobPositions: Object.fromEntries(state.blobPositions),
+          blobColors: Object.fromEntries(state.blobColors),
         },
       }));
 
-      broadcast('blob_join', { accountId }, accountId);
+      broadcast('blob_join', { accountId, color }, accountId);
     }
 
     socket.on('message', async (raw) => {
@@ -78,7 +84,7 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
           socket.close(4001, 'invalid ticket');
           return;
         }
-        onAuthenticated(id);
+        await onAuthenticated(id);
         return;
       }
 

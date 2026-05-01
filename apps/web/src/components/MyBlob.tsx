@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
+import { BeanieVoxels } from './BeanieVoxels.tsx';
 
 interface MyBlobProps {
   color: string;
@@ -72,16 +73,7 @@ export function MyBlob({ color, bassLevel, dropActive, initialPosition, onMove }
 
   return (
     <group ref={groupRef} position={[initialPosition.x, 0.5, initialPosition.y]}>
-      <mesh>
-        <icosahedronGeometry args={[0.5, 2]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={glowIntensity}
-          roughness={0.3}
-          metalness={0.1}
-        />
-      </mesh>
+      <BeanieVoxels color={color} glowIntensity={glowIntensity} />
       {/* "you are here" ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.45, 0]}>
         <ringGeometry args={[0.65, 0.8, 32]} />

@@ -84,6 +84,43 @@ export async function apiRoutes(app: FastifyInstance, db: Db) {
     return blob ?? reply.code(404).send({ error: 'blob not found' });
   });
 
+  // POST /api/blobs/me/color — one-time color pick at signup; locked once chosen
+  const COLOR_PALETTE = [
+    '#ff4d6d', '#ff9500', '#ffe600', '#7fff00',
+    '#00e5ff', '#00ff9f', '#c084fc', '#f472b6',
+    '#818cf8', '#4ade80', '#fb923c', '#e879f9',
+  ];
+  const DEFAULT_COLOR = '#8b5cf6';
+
+  app.post<{ Body: { color: string } }>('/api/blobs/me/color', {
+    schema: { body: { type: 'object', required: ['color'], properties: { color: { type: 'string' } } } },
+  }, async (req, reply) => {
+    const account = requireAuth(req);
+    const { color } = req.body;
+
+    if (!COLOR_PALETTE.includes(color)) {
+      return reply.code(400).send({ error: 'color not in palette' });
+    }
+
+    const [existing] = await db.select().from(blobs).where(eq(blobs.accountId, account.id));
+
+    if (existing && existing.color !== DEFAULT_COLOR) {
+      return reply.code(409).send({ error: 'color already set' });
+    }
+
+    if (existing) {
+      await db.update(blobs).set({ color }).where(eq(blobs.accountId, account.id));
+    } else {
+      await db.insert(blobs).values({ id: nanoid(), accountId: account.id, color });
+    }
+
+    room.updateColor(account.id, color);
+    broadcast('blob_update', { accountId: account.id, color });
+
+    const [blob] = await db.select().from(blobs).where(eq(blobs.accountId, account.id));
+    return reply.code(201).send(blob);
+  });
+
   // ── DJ routes ──────────────────────────────────────────────────────────────
 
   // POST /api/sets/start

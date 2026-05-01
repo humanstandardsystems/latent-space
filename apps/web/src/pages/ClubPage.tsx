@@ -4,12 +4,17 @@ import { ClubCanvas } from '../components/ClubCanvas.tsx';
 import { ChatPanel } from '../components/ChatPanel.tsx';
 import { NowPlaying } from '../components/NowPlaying.tsx';
 import { TwitchEmbed } from '../components/TwitchEmbed.tsx';
+import { ColorPickerModal } from '../components/ColorPickerModal.tsx';
+
+const DEFAULT_BLOB_COLOR = '#8b5cf6';
 
 export function ClubPage() {
   const { connected, subscribe } = useWebSocket();
   const [twitchChannel, setTwitchChannel] = useState<string | null>(null);
   const [connectedCount, setConnectedCount] = useState(0);
   const [myAccountId, setMyAccountId] = useState<string | null>(null);
+  const [myBlobColor, setMyBlobColor] = useState<string>(DEFAULT_BLOB_COLOR);
+  const [needsColorPick, setNeedsColorPick] = useState(false);
 
   useEffect(() => {
     return subscribe((msg) => {
@@ -25,7 +30,16 @@ export function ClubPage() {
   useEffect(() => {
     fetch('/api/me', { credentials: 'include' })
       .then((r) => r.json())
-      .then((d) => { if (d.account?.id) setMyAccountId(d.account.id); })
+      .then((d) => {
+        if (d.account?.id) {
+          setMyAccountId(d.account.id);
+          const blobColor: string | undefined = d.blob?.color;
+          if (!d.blob || blobColor === DEFAULT_BLOB_COLOR) {
+            setNeedsColorPick(true);
+          }
+          if (blobColor) setMyBlobColor(blobColor);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -42,7 +56,7 @@ export function ClubPage() {
     <div style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}>
       <div style={{ flex: 1, position: 'relative' }}>
         <Suspense fallback={null}>
-          <ClubCanvas myAccountId={myAccountId} />
+          <ClubCanvas myAccountId={myAccountId} myBlobColor={myBlobColor} />
         </Suspense>
 
         <NowPlaying />
@@ -74,6 +88,15 @@ export function ClubPage() {
       </div>
 
       <ChatPanel />
+
+      {needsColorPick && (
+        <ColorPickerModal
+          onColorPicked={(color) => {
+            setMyBlobColor(color);
+            setNeedsColorPick(false);
+          }}
+        />
+      )}
     </div>
   );
 }

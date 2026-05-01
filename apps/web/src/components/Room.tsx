@@ -80,7 +80,7 @@ function SpeakerTower({ position, accentColor }: { position: [number, number, nu
   );
 }
 
-export function Room({ myAccountId }: { myAccountId: string | null }) {
+export function Room({ myAccountId, myBlobColor }: { myAccountId: string | null; myBlobColor: string }) {
   const { subscribe, send } = useWebSocket();
   const [blobMap, setBlobMap] = useState<Map<string, BlobState>>(new Map());
   const [audio, setAudio] = useState<AudioState>({ bpm: 120, subBassEnergy: 0, dropActive: false });
@@ -122,14 +122,14 @@ export function Room({ myAccountId }: { myAccountId: string | null }) {
       }
 
       if (msg.type === 'blob_join') {
-        const { accountId } = msg.data as { accountId: string };
+        const { accountId, color } = msg.data as { accountId: string; color?: string };
         setBlobMap((prev) => {
           if (prev.has(accountId)) return prev;
           const next = new Map(prev);
           next.set(accountId, {
             accountId,
             position: { x: (Math.random() - 0.5) * 10, y: 0 },
-            color: '#00ffff',
+            color: color ?? '#8b5cf6',
             animationState: 'idle',
           });
           return next;
@@ -161,14 +161,17 @@ export function Room({ myAccountId }: { myAccountId: string | null }) {
       }
 
       if (msg.type === 'room_snapshot') {
-        const snap = msg.data as { blobPositions: Record<string, { x: number; y: number }> };
+        const snap = msg.data as {
+          blobPositions: Record<string, { x: number; y: number }>;
+          blobColors?: Record<string, string>;
+        };
         setBlobMap((prev) => {
           const next = new Map(prev);
           for (const [id, pos] of Object.entries(snap.blobPositions ?? {})) {
             next.set(id, {
               accountId: id,
               position: pos,
-              color: '#00ffff',
+              color: snap.blobColors?.[id] ?? '#8b5cf6',
               animationState: 'idle',
             });
           }
@@ -269,7 +272,7 @@ export function Room({ myAccountId }: { myAccountId: string | null }) {
       {/* My blob — keyboard controlled, always mounted when authenticated */}
       {myAccountId && (
         <MyBlob
-          color="#00ffff"
+          color={myBlobColor}
           bassLevel={audio.subBassEnergy}
           dropActive={audio.dropActive}
           initialPosition={{ x: 0, y: 0 }}

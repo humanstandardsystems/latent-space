@@ -16,6 +16,7 @@ export interface RoomState {
   audioState: AudioState;
   connectedAccountIds: Set<string>;
   blobPositions: Map<string, BlobPosition>;
+  blobColors: Map<string, string>;
 }
 
 const state: RoomState = {
@@ -23,6 +24,7 @@ const state: RoomState = {
   audioState: { bpm: 120, subBassEnergy: 0, dropActive: false },
   connectedAccountIds: new Set(),
   blobPositions: new Map(),
+  blobColors: new Map(),
 };
 
 export const room = {
@@ -43,6 +45,7 @@ export const room = {
   removeClient(accountId: string) {
     state.connectedAccountIds.delete(accountId);
     state.blobPositions.delete(accountId);
+    state.blobColors.delete(accountId);
   },
 
   updatePosition(accountId: string, pos: BlobPosition) {
@@ -51,5 +54,13 @@ export const room = {
 
   getPosition(accountId: string): BlobPosition {
     return state.blobPositions.get(accountId) ?? { x: Math.random() * 10 - 5, y: 0 };
+  },
+
+  updateColor(accountId: string, color: string) {
+    state.blobColors.set(accountId, color);
+  },
+
+  getColor(accountId: string): string {
+    return state.blobColors.get(accountId) ?? '#8b5cf6';
   },
 };
