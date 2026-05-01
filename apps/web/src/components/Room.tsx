@@ -79,8 +79,8 @@ function SpeakerTower({ position, accentColor }: { position: [number, number, nu
   );
 }
 
-export function Room() {
-  const { subscribe } = useWebSocket();
+export function Room({ myAccountId }: { myAccountId: string | null }) {
+  const { subscribe, send } = useWebSocket();
   const [blobMap, setBlobMap] = useState<Map<string, BlobState>>(new Map());
   const [audio, setAudio] = useState<AudioState>({ bpm: 120, subBassEnergy: 0, dropActive: false });
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
@@ -265,6 +265,23 @@ export function Room() {
         )}
       </group>
 
+      {/* Invisible click plane — sends move on click */}
+      {myAccountId && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.48, 0]}
+          onClick={(e) => {
+            e.stopPropagation();
+            const x = Math.max(-12, Math.min(12, e.point.x));
+            const y = Math.max(-8, Math.min(8, e.point.z));
+            send('move', { x, y });
+          }}
+        >
+          <planeGeometry args={[30, 22]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      )}
+
       {/* Blobs */}
       {Array.from(blobMap.values()).map((blob) => (
         <Blob
@@ -275,6 +292,7 @@ export function Room() {
           bassLevel={audio.subBassEnergy}
           dropActive={audio.dropActive}
           velocity={dropVelocities.current.get(blob.accountId)}
+          isMe={blob.accountId === myAccountId}
         />
       ))}
 

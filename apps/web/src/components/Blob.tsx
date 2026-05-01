@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { Mesh } from 'three';
+import type { Group } from 'three';
 
 type AnimationState = 'idle' | 'moshing' | 'floating' | 'shuffling';
 
@@ -15,7 +15,7 @@ interface BlobProps {
 }
 
 export function Blob({ position, color, animationState, bassLevel, isMe, dropActive, velocity }: BlobProps) {
-  const meshRef = useRef<Mesh>(null);
+  const meshRef = useRef<Group>(null);
   const phase = useRef(Math.random() * Math.PI * 2);
   const dropVel = useRef({ x: 0, z: 0 });
 
@@ -64,15 +64,23 @@ export function Blob({ position, color, animationState, bassLevel, isMe, dropAct
   const glowIntensity = 0.4 + bassLevel * 0.6;
 
   return (
-    <mesh ref={meshRef} position={position}>
-      <icosahedronGeometry args={[0.5, 2]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={glowIntensity}
-        roughness={0.3}
-        metalness={0.1}
-      />
-    </mesh>
+    <group ref={meshRef} position={position}>
+      <mesh>
+        <icosahedronGeometry args={[0.5, 2]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={glowIntensity}
+          roughness={0.3}
+          metalness={0.1}
+        />
+      </mesh>
+      {isMe && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.45, 0]}>
+          <ringGeometry args={[0.6, 0.75, 32]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+        </mesh>
+      )}
+    </group>
   );
 }

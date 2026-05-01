@@ -9,6 +9,7 @@ export function ClubPage() {
   const { connected, subscribe } = useWebSocket();
   const [twitchChannel, setTwitchChannel] = useState<string | null>(null);
   const [connectedCount, setConnectedCount] = useState(0);
+  const [myAccountId, setMyAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     return subscribe((msg) => {
@@ -20,6 +21,13 @@ export function ClubPage() {
       if (msg.type === 'blob_leave') setConnectedCount((n) => Math.max(0, n - 1));
     });
   }, [subscribe]);
+
+  useEffect(() => {
+    fetch('/api/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => { if (d.account?.id) setMyAccountId(d.account.id); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/now-playing', { credentials: 'include' })
@@ -34,7 +42,7 @@ export function ClubPage() {
     <div style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}>
       <div style={{ flex: 1, position: 'relative' }}>
         <Suspense fallback={null}>
-          <ClubCanvas />
+          <ClubCanvas myAccountId={myAccountId} />
         </Suspense>
 
         <NowPlaying />

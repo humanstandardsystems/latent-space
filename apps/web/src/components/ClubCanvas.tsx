@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { Room } from './Room.tsx';
 
-export function ClubCanvas() {
+export function ClubCanvas({ myAccountId }: { myAccountId: string | null }) {
   return (
     <Canvas
       camera={{ position: [0, 6, 14], fov: 65 }}
@@ -9,7 +9,7 @@ export function ClubCanvas() {
       gl={{ antialias: true }}
     >
       <fog attach="fog" args={['#000814', 20, 60]} />
-      <Room />
+      <Room myAccountId={myAccountId} />
     </Canvas>
   );
 }
