@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { Text, Grid } from '@react-three/drei';
+import { MyBlob } from './MyBlob.tsx';
 import { useWebSocket } from '../contexts/WebSocketContext.tsx';
 import { Blob } from './Blob.tsx';
 
@@ -265,36 +266,31 @@ export function Room({ myAccountId }: { myAccountId: string | null }) {
         )}
       </group>
 
-      {/* Invisible click plane — sends move on click */}
-      {myAccountId && (
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, -0.48, 0]}
-          onClick={(e) => {
-            e.stopPropagation();
-            const x = Math.max(-12, Math.min(12, e.point.x));
-            const y = Math.max(-8, Math.min(8, e.point.z));
-            send('move', { x, y });
-          }}
-        >
-          <planeGeometry args={[30, 22]} />
-          <meshBasicMaterial transparent opacity={0} />
-        </mesh>
-      )}
-
-      {/* Blobs */}
-      {Array.from(blobMap.values()).map((blob) => (
-        <Blob
-          key={blob.accountId}
-          position={[blob.position.x, 0.5, blob.position.y]}
-          color={blob.color}
-          animationState={animState}
+      {/* My blob — keyboard controlled */}
+      {myAccountId && blobMap.has(myAccountId) && (
+        <MyBlob
+          color={blobMap.get(myAccountId)!.color}
           bassLevel={audio.subBassEnergy}
           dropActive={audio.dropActive}
-          velocity={dropVelocities.current.get(blob.accountId)}
-          isMe={blob.accountId === myAccountId}
+          initialPosition={blobMap.get(myAccountId)!.position}
+          onMove={(x, y) => send('move', { x, y })}
         />
-      ))}
+      )}
+
+      {/* Other blobs */}
+      {Array.from(blobMap.values())
+        .filter((blob) => blob.accountId !== myAccountId)
+        .map((blob) => (
+          <Blob
+            key={blob.accountId}
+            position={[blob.position.x, 0.5, blob.position.y]}
+            color={blob.color}
+            animationState={animState}
+            bassLevel={audio.subBassEnergy}
+            dropActive={audio.dropActive}
+            velocity={dropVelocities.current.get(blob.accountId)}
+          />
+        ))}
 
       {/* Post-processing */}
       <EffectComposer>
