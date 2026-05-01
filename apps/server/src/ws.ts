@@ -26,33 +26,37 @@ export function getConnectedClients() {
 }
 
 export async function wsRoutes(app: FastifyInstance, db: Db) {
-  app.get('/ws', { websocket: true }, (socket, req) => {
-    const ticket = (req.query as Record<string, string>)['ticket'] ?? '';
-    const accountId = redeemWsTicket(ticket);
+  app.get('/ws', { websocket: true }, (socket) => {
+    let accountId: string | null = null;
 
-    if (!accountId) {
-      socket.send(JSON.stringify({ type: 'error', data: { message: 'not authenticated' } }));
-      socket.close(4001, 'not authenticated');
-      return;
+    // Give the client 5s to send an auth message before closing
+    const authTimeout = setTimeout(() => {
+      if (!accountId) {
+        socket.send(JSON.stringify({ type: 'error', data: { message: 'auth timeout' } }));
+        socket.close(4001, 'auth timeout');
+      }
+    }, 5000);
+
+    function onAuthenticated(id: string) {
+      accountId = id;
+      clearTimeout(authTimeout);
+
+      clients.set(accountId, socket);
+      room.addClient(accountId);
+
+      const state = room.getState();
+      socket.send(JSON.stringify({
+        type: 'room_snapshot',
+        data: {
+          activeSetId: state.activeSetId,
+          audioState: state.audioState,
+          connectedCount: state.connectedAccountIds.size,
+          blobPositions: Object.fromEntries(state.blobPositions),
+        },
+      }));
+
+      broadcast('blob_join', { accountId }, accountId);
     }
-
-    clients.set(accountId, socket);
-    room.addClient(accountId);
-
-    // send initial room snapshot
-    const state = room.getState();
-    socket.send(JSON.stringify({
-      type: 'room_snapshot',
-      data: {
-        activeSetId: state.activeSetId,
-        audioState: state.audioState,
-        connectedCount: state.connectedAccountIds.size,
-        blobPositions: Object.fromEntries(state.blobPositions),
-      },
-    }));
-
-    // notify others
-    broadcast('blob_join', { accountId }, accountId);
 
     socket.on('message', async (raw) => {
       let msg: { type: string; data: Record<string, unknown> };
@@ -61,6 +65,23 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
       } catch {
         return;
       }
+
+      // Auth handshake — must come first
+      if (msg.type === 'auth') {
+        if (accountId) return; // already authed
+        const ticket = String(msg.data.ticket ?? '');
+        const id = redeemWsTicket(ticket);
+        if (!id) {
+          socket.send(JSON.stringify({ type: 'error', data: { message: 'invalid ticket' } }));
+          socket.close(4001, 'invalid ticket');
+          return;
+        }
+        onAuthenticated(id);
+        return;
+      }
+
+      // All other messages require auth
+      if (!accountId) return;
 
       if (msg.type === 'move') {
         const { x, y } = msg.data as { x: number; y: number };
@@ -86,9 +107,12 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
     });
 
     socket.on('close', () => {
-      clients.delete(accountId);
-      room.removeClient(accountId);
-      broadcast('blob_leave', { accountId });
+      clearTimeout(authTimeout);
+      if (accountId) {
+        clients.delete(accountId);
+        room.removeClient(accountId);
+        broadcast('blob_leave', { accountId });
+      }
     });
   });
 }

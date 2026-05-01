@@ -31,12 +31,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       }
     } catch { /* unauthenticated — connect without ticket, server will close gracefully */ }
 
-    const base = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
-    const wsUrl = ticket ? `${base}?ticket=${ticket}` : base;
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
-    ws.onopen = () => setConnected(true);
+    ws.onopen = () => {
+      if (ticket) ws.send(JSON.stringify({ type: 'auth', data: { ticket } }));
+      setConnected(true);
+    };
 
     ws.onmessage = (e) => {
       try {
