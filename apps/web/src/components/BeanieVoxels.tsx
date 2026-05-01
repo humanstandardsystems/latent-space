@@ -6,16 +6,16 @@ const STEP = 0.30;
 type Vec3 = [number, number, number];
 
 const EYE_POSITIONS: Vec3[] = [
-  [-1 * STEP, 1 * STEP, 1 * STEP],
-  [ 1 * STEP, 1 * STEP, 1 * STEP],
+  [-1 * STEP, 0 * STEP, 1 * STEP],
+  [ 1 * STEP, 0 * STEP, 1 * STEP],
 ];
 
 const BODY_AND_LEG_POSITIONS: Vec3[] = (() => {
   const positions: Vec3[] = [];
   for (let cx = -1; cx <= 1; cx++) {
     for (let cz = -1; cz <= 1; cz++) {
-      for (let cy = 0; cy <= 2; cy++) {
-        if (cy === 1 && cz === 1 && (cx === -1 || cx === 1)) continue;
+      for (let cy = 0; cy <= 1; cy++) {
+        if (cy === 0 && cz === 1 && (cx === -1 || cx === 1)) continue;
         positions.push([cx * STEP, cy * STEP, cz * STEP]);
       }
     }
