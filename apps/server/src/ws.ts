@@ -29,13 +29,15 @@ export async function wsRoutes(app: FastifyInstance, db: Db) {
   app.get('/ws', { websocket: true }, (socket) => {
     let accountId: string | null = null;
 
-    // Give the client 5s to send an auth message before closing
+    // Give the client 3s to send an auth message before closing
     const authTimeout = setTimeout(() => {
       if (!accountId) {
-        socket.send(JSON.stringify({ type: 'error', data: { message: 'auth timeout' } }));
-        socket.close(4001, 'auth timeout');
+        try {
+          socket.send(JSON.stringify({ type: 'error', data: { message: 'auth timeout' } }));
+          socket.close(4001, 'auth timeout');
+        } catch { /* socket already closed — ignore */ }
       }
-    }, 5000);
+    }, 3000);
 
     function onAuthenticated(id: string) {
       accountId = id;
