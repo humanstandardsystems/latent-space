@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { sessions as sessionsTable, accounts } from '@latent-space/db';
-import { eq, gt, and } from 'drizzle-orm';
+import { eq, gt } from 'drizzle-orm';
 import type { Db } from '@latent-space/db';
 
 // In-memory session store: sessionToken → accountId
