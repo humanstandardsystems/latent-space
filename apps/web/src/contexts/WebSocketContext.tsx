@@ -21,8 +21,18 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [lastMessage, setLastMessage] = useState<WsMessage | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const connect = useCallback(() => {
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+  const connect = useCallback(async () => {
+    let ticket = '';
+    try {
+      const res = await fetch('/api/ws-ticket', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        ticket = data.ticket ?? '';
+      }
+    } catch { /* unauthenticated — connect without ticket, server will close gracefully */ }
+
+    const base = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+    const wsUrl = ticket ? `${base}?ticket=${ticket}` : base;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

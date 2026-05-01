@@ -7,6 +7,7 @@ import {
 import { eq, desc, isNull, and } from 'drizzle-orm';
 import { room } from '../room.js';
 import { broadcast } from '../ws.js';
+import { createWsTicket } from '../sessions.js';
 
 function requireAuth(req: { account: { id: string; email: string; isDj: boolean; createdAt: Date } | null }) {
   if (!req.account) throw { statusCode: 401, message: 'not authenticated' };
@@ -54,6 +55,12 @@ export async function apiRoutes(app: FastifyInstance, db: Db) {
     const account = requireAuth(req);
     const [blob] = await db.select().from(blobs).where(eq(blobs.accountId, account.id));
     return { account, blob: blob ?? null };
+  });
+
+  // GET /api/ws-ticket — one-time token for WS auth (bypasses cookie stripping by proxies)
+  app.get('/api/ws-ticket', async (req) => {
+    const account = requireAuth(req);
+    return { ticket: createWsTicket(account.id) };
   });
 
   // POST /api/blobs — create blob (one per account)

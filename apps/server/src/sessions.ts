@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import type { Db } from '@latent-space/db';
 import { accounts } from '@latent-space/db';
 import { eq } from 'drizzle-orm';
@@ -16,6 +17,22 @@ export const sessionStore = {
     sessions.delete(token);
   },
 };
+
+// One-time WS tickets: ticket → { accountId, expiresAt }
+const tickets = new Map<string, { accountId: string; expiresAt: number }>();
+
+export function createWsTicket(accountId: string): string {
+  const ticket = nanoid(32);
+  tickets.set(ticket, { accountId, expiresAt: Date.now() + 30_000 });
+  return ticket;
+}
+
+export function redeemWsTicket(ticket: string): string | null {
+  const entry = tickets.get(ticket);
+  tickets.delete(ticket); // always delete — one-time use
+  if (!entry || Date.now() > entry.expiresAt) return null;
+  return entry.accountId;
+}
 
 export async function getAccountFromToken(token: string, db: Db) {
   const accountId = sessionStore.get(token);
