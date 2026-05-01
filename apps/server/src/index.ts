@@ -3,6 +3,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyWs from '@fastify/websocket';
 import { createDb, runMigrations, seedSubstances } from '@latent-space/db';
+import { initSessionStore, loadSessions } from './sessions.js';
 import { fileURLToPath } from 'url';
 import { dirname, resolve, extname } from 'path';
 import { createReadStream, existsSync, statSync } from 'fs';
@@ -40,6 +41,8 @@ async function main() {
 
   runMigrations(db);
   await seedSubstances(db);
+  initSessionStore(db);
+  await loadSessions(db);
   console.log('db ready');
 
   const app = Fastify({ logger: { level: 'info' } });

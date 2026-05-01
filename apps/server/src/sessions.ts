@@ -1,20 +1,46 @@
 import { nanoid } from 'nanoid';
+import { sessions as sessionsTable, accounts } from '@latent-space/db';
+import { eq, gt, and } from 'drizzle-orm';
 import type { Db } from '@latent-space/db';
-import { accounts } from '@latent-space/db';
-import { eq } from 'drizzle-orm';
 
 // In-memory session store: sessionToken → accountId
-const sessions = new Map<string, string>();
+const memory = new Map<string, string>();
+let _db: Db | null = null;
+
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+export function initSessionStore(db: Db) {
+  _db = db;
+}
+
+export async function loadSessions(db: Db) {
+  const now = new Date();
+  const rows = await db
+    .select()
+    .from(sessionsTable)
+    .where(gt(sessionsTable.expiresAt, now));
+  for (const row of rows) {
+    memory.set(row.id, row.accountId);
+  }
+  console.log(`sessions: loaded ${rows.length} from db`);
+}
 
 export const sessionStore = {
   create(token: string, accountId: string) {
-    sessions.set(token, accountId);
+    memory.set(token, accountId);
+    if (_db) {
+      const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+      _db.insert(sessionsTable).values({ id: token, accountId, expiresAt }).catch(console.error);
+    }
   },
   get(token: string) {
-    return sessions.get(token);
+    return memory.get(token);
   },
   delete(token: string) {
-    sessions.delete(token);
+    memory.delete(token);
+    if (_db) {
+      _db.delete(sessionsTable).where(eq(sessionsTable.id, token)).catch(console.error);
+    }
   },
 };
 

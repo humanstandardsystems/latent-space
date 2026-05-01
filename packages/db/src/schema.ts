@@ -24,6 +24,14 @@ export const magicLinks = sqliteTable('magic_links', {
   createdAt: timestamp(),
 });
 
+// ── sessions ──────────────────────────────────────────────────────────────────
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id').notNull().references(() => accounts.id),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: timestamp(),
+});
+
 // ── blobs ─────────────────────────────────────────────────────────────────────
 export const blobs = sqliteTable('blobs', {
   id: text('id').primaryKey(),
