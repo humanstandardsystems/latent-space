@@ -3,6 +3,7 @@ import type { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
 import { chatMessages, type Db } from '@latent-space/db';
 import { room } from './room.js';
+import { getAccountFromToken } from './sessions.js';
 
 // accountId → WebSocket
 const clients = new Map<string, WebSocket>();
@@ -25,8 +26,10 @@ export function getConnectedClients() {
 }
 
 export async function wsRoutes(app: FastifyInstance, db: Db) {
-  app.get('/ws', { websocket: true }, (socket, req) => {
-    const accountId = req.account?.id;
+  app.get('/ws', { websocket: true }, async (socket, req) => {
+    const token = req.cookies['session'];
+    const account = token ? await getAccountFromToken(token, db) : null;
+    const accountId = account?.id;
 
     if (!accountId) {
       socket.send(JSON.stringify({ type: 'error', data: { message: 'not authenticated' } }));
