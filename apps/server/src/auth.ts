@@ -29,7 +29,7 @@ export async function authRoutes(app: FastifyInstance, db: Db) {
 
     if (env.RESEND_API_KEY) {
       await getResend().emails.send({
-        from: 'latent-space <noreply@humanstandard.io>',
+        from: 'latent-space <onboarding@resend.dev>',
         to: email,
         subject: 'your link to the rave',
         html: `<p>enter the room: <a href="${link}">${link}</a></p><p>link expires in 15 minutes.</p>`,
