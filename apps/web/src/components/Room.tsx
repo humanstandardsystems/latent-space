@@ -266,13 +266,13 @@ export function Room({ myAccountId }: { myAccountId: string | null }) {
         )}
       </group>
 
-      {/* My blob — keyboard controlled */}
-      {myAccountId && blobMap.has(myAccountId) && (
+      {/* My blob — keyboard controlled, always mounted when authenticated */}
+      {myAccountId && (
         <MyBlob
-          color={blobMap.get(myAccountId)!.color}
+          color="#00ffff"
           bassLevel={audio.subBassEnergy}
           dropActive={audio.dropActive}
-          initialPosition={blobMap.get(myAccountId)!.position}
+          initialPosition={{ x: 0, y: 0 }}
           onMove={(x, y) => send('move', { x, y })}
         />
       )}
