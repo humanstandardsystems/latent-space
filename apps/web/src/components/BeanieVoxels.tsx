@@ -1,7 +1,7 @@
 import { Instances, Instance } from '@react-three/drei';
 
-const VOXEL = 0.18;
-const STEP = 0.195;
+const VOXEL = 0.28;
+const STEP = 0.30;
 
 type Vec3 = [number, number, number];
 
