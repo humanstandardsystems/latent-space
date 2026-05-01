@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { Text } from '@react-three/drei';
+import { Text, Grid } from '@react-three/drei';
 import { useWebSocket } from '../contexts/WebSocketContext.tsx';
 import { Blob } from './Blob.tsx';
 
@@ -33,6 +34,51 @@ function genreToAnimation(genre?: string): AnimationState {
   return 'idle';
 }
 
+// Pulsing ceiling rig bar
+function RigBar({ position, color, phase }: { position: [number, number, number]; color: string; phase: number }) {
+  const meshRef = useRef<any>(null);
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const t = clock.elapsedTime;
+    meshRef.current.material.emissiveIntensity = 1.5 + Math.sin(t * 2 + phase) * 0.5;
+  });
+  return (
+    <mesh ref={meshRef} position={position}>
+      <boxGeometry args={[0.06, 0.06, 14]} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.5} roughness={0.2} />
+    </mesh>
+  );
+}
+
+// Speaker tower with glowing accent strips
+function SpeakerTower({ position, accentColor }: { position: [number, number, number]; accentColor: string }) {
+  const stripRef = useRef<any>(null);
+  useFrame(({ clock }) => {
+    if (!stripRef.current) return;
+    const t = clock.elapsedTime;
+    stripRef.current.material.emissiveIntensity = 0.8 + Math.sin(t * 1.5 + position[0]) * 0.4;
+  });
+  return (
+    <group position={position}>
+      {/* Body */}
+      <mesh position={[0, 2, 0]}>
+        <boxGeometry args={[0.7, 4, 0.7]} />
+        <meshStandardMaterial color="#040c1a" metalness={0.9} roughness={0.15} />
+      </mesh>
+      {/* Top accent strip */}
+      <mesh ref={stripRef} position={[0, 4.1, 0]}>
+        <boxGeometry args={[0.72, 0.08, 0.72]} />
+        <meshStandardMaterial color={accentColor} emissive={accentColor} emissiveIntensity={0.8} roughness={0.1} />
+      </mesh>
+      {/* Mid accent strip */}
+      <mesh position={[0, 2, 0]}>
+        <boxGeometry args={[0.72, 0.04, 0.72]} />
+        <meshStandardMaterial color={accentColor} emissive={accentColor} emissiveIntensity={0.5} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
 export function Room() {
   const { subscribe } = useWebSocket();
   const [blobMap, setBlobMap] = useState<Map<string, BlobState>>(new Map());
@@ -48,7 +94,6 @@ export function Room() {
 
       if (msg.type === 'drop_start') {
         setAudio((a) => ({ ...a, dropActive: true }));
-        // assign random scatter velocities
         setBlobMap((prev) => {
           const next = new Map(prev);
           for (const [id] of next) {
@@ -83,7 +128,7 @@ export function Room() {
           next.set(accountId, {
             accountId,
             position: { x: (Math.random() - 0.5) * 10, y: 0 },
-            color: '#8b5cf6',
+            color: '#00ffff',
             animationState: 'idle',
           });
           return next;
@@ -122,7 +167,7 @@ export function Room() {
             next.set(id, {
               accountId: id,
               position: pos,
-              color: '#8b5cf6',
+              color: '#00ffff',
               animationState: 'idle',
             });
           }
@@ -137,36 +182,85 @@ export function Room() {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.1} color="#1a0040" />
-      <pointLight position={[0, 8, 0]} intensity={2} color="#6d28d9" />
-      <pointLight position={[-8, 4, -8]} intensity={1.5} color="#be185d" distance={20} />
-      <pointLight position={[8, 4, 8]} intensity={1.5} color="#0ea5e9" distance={20} />
+      <ambientLight intensity={0.04} color="#000814" />
+      <pointLight position={[0, 8, 0]} intensity={4} color="#00ffff" distance={30} />
+      <pointLight position={[-8, 5, 0]} intensity={3} color="#ff00ff" distance={25} />
+      <pointLight position={[8, 5, 0]} intensity={3} color="#ff00ff" distance={25} />
+      <pointLight position={[0, 2, 8]} intensity={1.5} color="#0040ff" distance={20} />
       {audio.dropActive && (
-        <pointLight position={[0, 6, 0]} intensity={10} color="#ffffff" distance={30} />
+        <pointLight position={[0, 6, 0]} intensity={20} color="#ffffff" distance={40} />
       )}
 
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color="#050008" roughness={0.1} metalness={0.8} />
-      </mesh>
+      {/* Tron grid floor */}
+      <Grid
+        position={[0, -0.5, 0]}
+        args={[60, 60]}
+        cellColor="#0a1a2a"
+        sectionColor="#00ffff"
+        cellSize={1}
+        sectionSize={5}
+        fadeDistance={50}
+        fadeStrength={1.5}
+        infiniteGrid
+      />
+
+      {/* Ceiling light rig bars */}
+      <group position={[0, 9, -1]}>
+        <RigBar position={[-3.5, 0, 0]} color="#00ffff" phase={0} />
+        <RigBar position={[-1.5, 0, 0]} color="#ff00ff" phase={1.2} />
+        <RigBar position={[1.5, 0, 0]} color="#00ffff" phase={2.4} />
+        <RigBar position={[3.5, 0, 0]} color="#ff00ff" phase={0.6} />
+      </group>
+
+      {/* Speaker towers — flanking the DJ booth */}
+      <SpeakerTower position={[-5.5, 0, -6]} accentColor="#00ffff" />
+      <SpeakerTower position={[5.5, 0, -6]} accentColor="#ff00ff" />
+      {/* Back corners */}
+      <SpeakerTower position={[-5.5, 0, 5]} accentColor="#ff00ff" />
+      <SpeakerTower position={[5.5, 0, 5]} accentColor="#00ffff" />
 
       {/* DJ Booth */}
       <group position={[0, 0, -8]}>
+        {/* Main body */}
         <mesh position={[0, 0.4, 0]}>
           <boxGeometry args={[4, 0.8, 1.5]} />
-          <meshStandardMaterial color="#1a0040" emissive="#4c1d95" emissiveIntensity={0.3} roughness={0.4} />
+          <meshStandardMaterial color="#020c1a" metalness={0.95} roughness={0.05} />
         </mesh>
+        {/* Front edge glow strip */}
+        <mesh position={[0, 0.02, 0.76]}>
+          <boxGeometry args={[4.02, 0.04, 0.04]} />
+          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={3} />
+        </mesh>
+        {/* Top edge strip */}
+        <mesh position={[0, 0.82, 0]}>
+          <boxGeometry args={[4.02, 0.04, 1.52]} />
+          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+        </mesh>
+        {/* Now playing text */}
         {nowPlaying && (
           <Text
-            position={[0, 2, 0]}
-            fontSize={0.3}
-            color="#c084fc"
+            position={[0, 2.2, 0]}
+            fontSize={0.28}
+            color="#00ffff"
+            anchorX="center"
+            anchorY="middle"
+            font={undefined}
+            outlineWidth={0.01}
+            outlineColor="#000814"
+          >
+            {[nowPlaying.artist, nowPlaying.title].filter(Boolean).join(' — ') || 'latent space'}
+          </Text>
+        )}
+        {!nowPlaying && (
+          <Text
+            position={[0, 2.2, 0]}
+            fontSize={0.18}
+            color="#1a3a5a"
             anchorX="center"
             anchorY="middle"
             font={undefined}
           >
-            {[nowPlaying.artist, nowPlaying.title].filter(Boolean).join(' - ') || 'latent space'}
+            latent space
           </Text>
         )}
       </group>
@@ -187,9 +281,9 @@ export function Room() {
       {/* Post-processing */}
       <EffectComposer>
         <Bloom
-          intensity={audio.dropActive ? 3 : 1 + audio.subBassEnergy * 2}
-          luminanceThreshold={0.2}
-          luminanceSmoothing={0.9}
+          intensity={audio.dropActive ? 5 : 1.2 + audio.subBassEnergy * 2}
+          luminanceThreshold={0.1}
+          luminanceSmoothing={0.2}
         />
       </EffectComposer>
     </>
