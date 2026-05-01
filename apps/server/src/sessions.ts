@@ -14,15 +14,19 @@ export function initSessionStore(db: Db) {
 }
 
 export async function loadSessions(db: Db) {
-  const now = new Date();
-  const rows = await db
-    .select()
-    .from(sessionsTable)
-    .where(gt(sessionsTable.expiresAt, now));
-  for (const row of rows) {
-    memory.set(row.id, row.accountId);
+  try {
+    const now = new Date();
+    const rows = await db
+      .select()
+      .from(sessionsTable)
+      .where(gt(sessionsTable.expiresAt, now));
+    for (const row of rows) {
+      memory.set(row.id, row.accountId);
+    }
+    console.log(`sessions: loaded ${rows.length} from db`);
+  } catch (err) {
+    console.warn('sessions: could not load from db (migration may be pending):', (err as Error).message);
   }
-  console.log(`sessions: loaded ${rows.length} from db`);
 }
 
 export const sessionStore = {

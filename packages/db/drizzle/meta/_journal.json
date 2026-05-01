@@ -8,6 +8,13 @@
       "when": 1777531912359,
       "tag": "0000_yummy_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777615514044,
+      "tag": "0001_bizarre_betty_ross",
+      "breakpoints": true
     }
   ]
 }
